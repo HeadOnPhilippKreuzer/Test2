@@ -1,0 +1,26 @@
+name: enforce-pullrequest-dependencys
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  block_pr:
+    runs-on: self-hosted
+    permissions:
+        pull-requests: read
+    steps:
+    - name: Block PullRequest if another PullRequest targets the source branch 
+      run: |
+        $prNumber = (ConvertFrom-Json (Get-Content -Raw $env:GITHUB_EVENT_PATH)).number
+        $headBranch = (ConvertFrom-Json (Get-Content -Raw $env:GITHUB_EVENT_PATH)).pull_request.head.ref
+        $repo = $env:GITHUB_REPOSITORY
+        $prs = Invoke-RestMethod `
+        -Headers @{"Accept"="application/vnd.github.v3+json"; "Authorization"="token $env:GITHUB_TOKEN"} `
+        -Uri "https://api.github.com/repos/$repo/pulls?state=open"
+        $targetingPrs = $prs | Where-Object { $_.base.ref -eq $headBranch -and $_.number -ne $prNumber }
+        if ($targetingPrs) {
+            Write-Output "Another PullRequest is already targeting the source branch $headBranch of this PullRequest. Please wait until it is merged."
+            exit 1
+        }
+    env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
