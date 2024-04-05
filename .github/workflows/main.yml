@@ -1,9 +1,7 @@
 name: enforce-pullrequest-dependencys
 on:
   pull_request:
-    types: [closed, opened, synchronize]
-  merge_group:
-    types: [checks_requested]
+    types: [closed, opened, synchronize, enqueued]
 jobs:
   block_pr:
     runs-on: windows-latest
